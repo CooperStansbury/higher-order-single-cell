@@ -91,7 +91,8 @@ if __name__ == "__main__":
     cell_matrix = cell_matrix[mask]
     
     cell_matrix = build_contact_map(cell_matrix)
-    cell_matrix.to_csv(outpath, index=True)
+    cell_matrix.columns = cell_matrix.columns.astype(str)
+    cell_matrix.to_parquet(outpath, index=True)
     
 
     

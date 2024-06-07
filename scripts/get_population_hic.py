@@ -23,9 +23,8 @@ if __name__ == "__main__":
     A = clr.matrix(balance=False).fetch(str(chrom))[:]
     A = pd.DataFrame(A)
     
-    A.to_csv(outpath, index=True)
-
-    print(f"{A.shape}")
+    A.columns = A.columns.astype(str)
+    A.to_parquet(outpath, index=False)
 
             
 

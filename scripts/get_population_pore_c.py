@@ -2,16 +2,11 @@ import os
 import numpy as np
 import sys
 import pandas as pd
-import cooler
 
 source_path = os.path.abspath("source/")
 sys.path.append(source_path)
 import utils as ut
 import matrix as matrix
-
-
-
-
 
 
 
@@ -26,7 +21,7 @@ if __name__ == "__main__":
     df = []
     for fpath in in_paths:
         tmp = pd.read_parquet(fpath)
-        tmp = ut.filter_and_prepare_data(tmp, resolution, mapq=1)
+        tmp = ut.filter_and_prepare_porec_data(tmp, resolution, mapq=1)
         tmp = tmp[tmp['chrom'] == chrom_num]
         df.append(tmp)
         
@@ -36,7 +31,8 @@ if __name__ == "__main__":
                                                   order_threshold=1, 
                                                   sample_size=None)
     
-    incidence_matrix.to_csv(outpath, index=True)
+    incidence_matrix.columns = incidence_matrix.columns.astype(str)
+    incidence_matrix.to_parquet(outpath, index=True)
     
     
  

@@ -1,6 +1,23 @@
 import pandas as pd
 import numpy as np
 
+def min_max(values):
+    """Scales a series of values to the range [0, 1] using NumPy.
+
+    Args:
+        values: A Pandas Series or a NumPy array of numeric values.
+
+    Returns:
+        The scaled values as a Pandas Series or a NumPy array.
+    """
+
+    range_val = np.ptp(values)  # Peak-to-peak (max - min)
+    if range_val == 0:
+        return values
+    
+    scaled_values = (values - values.min()) / range_val
+    return scaled_values
+
 
 def generate_incidence_matrix(n_rows, n_cols, order, min_count, max_count=None):
     """Generates an incidence matrix with randomly imputed new columns.

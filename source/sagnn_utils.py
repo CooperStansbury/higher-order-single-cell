@@ -13,6 +13,57 @@ import time
 
 np.random.seed(0)
 
+
+def prepare_training_data(pdf, chrom, order_threshold, sample_size, train_size):
+    """Prepares training data for a chromosome with filtering, sampling, and splitting.
+
+    Args:
+        pdf (pd.DataFrame): DataFrame containing contact data.
+        chrom (str): Name of the chromosome to process.
+        order_threshold (int): Minimum contact order to retain.
+        sample_size (int): Number of reads to sample.
+        train_size (float): Proportion of data to use for training (0, 1).
+
+    Returns:
+        tuple:
+            feature (torch.Tensor): Features for positive samples in the training set.
+            I_train (torch.Tensor): Training incidence matrix.
+            y_train (torch.Tensor): Training labels. 
+            I_test (torch.Tensor): Testing incidence matrix.
+            y_test (torch.Tensor): Testing labels. 
+            bins (list): List of bins in the training data
+    """
+
+    def _process_chromosome(chrom_data, order_thresh, sample):
+        """Processes data for a specific chromosome."""
+        Ipos, _ = ut.process_chromosome_data(chrom_data, order_thresh, sample)
+        return Ipos.index.to_list(), torch.tensor(Ipos.to_numpy(), dtype=torch.float)
+
+    def _generate_negative_matrix(pos_matrix):
+        """Generates a negative incidence matrix."""
+        neg_matrix = sag.create_neg_incidence_matrix(pos_matrix)
+        return torch.unique(neg_matrix, dim=1)  # Remove duplicates
+
+    # Extract and process chromosome data
+    chrom_data = pdf[pdf['chrom'] == chrom].reset_index(drop=True)
+    bins, Ipos_torch = _process_chromosome(chrom_data, order_threshold, sample_size)
+
+    # Generate negative incidence matrix
+    Ineg = _generate_negative_matrix(Ipos_torch)
+
+    # Build full data and labels
+    I = torch.cat((Ipos_torch, Ineg), dim=1)
+    y = sag.create_label(Ipos_torch, Ineg)
+
+    # Split data into training and testing sets
+    I_train, y_train, I_test, y_test = sag.train_test_split(I, y, train_size=train_size)
+
+    # Extract features for positive samples in the training set
+    feature = I_train[:, y_train == 1]
+
+    return feature, I_train, y_train, I_test, y_test, bins 
+    
+
 def predict(incidence_matrix, model):
     """Infers predictions from the model.
 
@@ -143,6 +194,7 @@ def hyperlink_score_loss(y_pred, y):
     loss = torch.mean(logistic_loss)
     return loss
 
+
 def create_label(incidence_matrix_pos, incidence_matrix_neg):
     """Creates labels for positive and negative hyperedges.
 
@@ -156,6 +208,7 @@ def create_label(incidence_matrix_pos, incidence_matrix_neg):
     y_pos = torch.ones(len(incidence_matrix_pos.T))
     y_neg = torch.zeros(len(incidence_matrix_neg.T))
     return torch.cat((y_pos, y_neg))
+
 
 def train_test_split(incidence_matrix, y_label, train_size):
     """Splits data into training and testing sets.
@@ -178,6 +231,7 @@ def train_test_split(incidence_matrix, y_label, train_size):
     y_label = y_label[shuffle_index]
     split_index = round(train_size * size)
     return incidence_matrix[:, :split_index], y_label[:split_index], incidence_matrix[:, split_index:], y_label[split_index:]
+
 
 def node2vec(incidence_matrix, emb_dim):
     """Generates Node2Vec embeddings for nodes in a hypergraph.

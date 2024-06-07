@@ -3,15 +3,11 @@ import itertools
 import pandas as pd
 import numpy as np
 import networkx as nx
-from tqdm import tqdm
 import pickle as pk
 from itertools import compress
 import sys
 import copy
-
-sys.path.append("/home/cstansbu/.local/lib/python3.9/site-packages/")
 import xgi
-
 
 def xgi_to_incidence(hypergraph):
     """Converts an XGI hypergraph to its corresponding incidence matrix.

@@ -20,7 +20,7 @@ if __name__ == "__main__":
     cool_path = f"{in_path}::resolutions/{resolution}"
     clr = cooler.Cooler(cool_path)
     df = pd.DataFrame(clr.chromsizes).reset_index()
-    df.to_csv(outpath, index=False)
+    df.to_parquet(outpath, index=False)
 
             
 

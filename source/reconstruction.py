@@ -9,10 +9,9 @@ import os
 import sys
 import numpy as np
 
-tool_path = "/home/cstansbu/miniconda3/lib/python3.9/site-packages/"
-sys.path.append(tool_path)
-import graph_tool.all as gt
-print(f"{gt.__version__=}")
+
+env_path = "/home/cstansbu/miniconda3/envs/graph_tool/lib/python3.11/site-packages/"
+sys.path.append(env_path)
 
 
 def learn_hyperedges_mcmc(g, niter=10):
@@ -34,7 +33,8 @@ def learn_hyperedges_mcmc(g, niter=10):
     for v in state.f.vertices():  
         if state.is_fac[v]:
             continue
-
+        
+        # if the state is occupied
         if state.x[v] > 0:
             hyperedge = list(state.c[v])
             hyperedges.append(hyperedge)
@@ -54,3 +54,6 @@ def create_graph_tools_from_adjacency(adjacency_matrix):
     nonzero_indices = np.nonzero(adjacency_matrix)
     edge_list = list(zip(*nonzero_indices)) 
     return gt.Graph(edge_list, directed=False) 
+
+
+
