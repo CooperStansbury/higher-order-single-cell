@@ -1,10 +1,154 @@
 import pandas as pd
 import numpy as np
+import scipy
 from scipy.linalg import toeplitz
+from scipy import sparse
 import scipy.sparse as sps
 from scipy.sparse import csr_matrix
 from scipy.sparse import issparse
 from scipy.stats import chi2
+
+
+def hypergraph_entropy(L):
+    """
+    Calculates the hypergraph entropy from the hypergraph Laplacian matrix L.
+
+    Args:
+        L (scipy.sparse.csr_matrix): The hypergraph Laplacian matrix as a sparse CSR matrix.
+
+    Returns:
+        float: The hypergraph entropy.
+    """
+    # Get eigenvalues and eigenvectors of L. For sparse matrices, using `eigsh` is efficient
+    eigenvalues, _ = scipy.sparse.linalg.eigsh(L, k=L.shape[0]-1, which='SM')
+
+    # Ensure proper handling of small or negative values close to zero to avoid numerical issues.
+    eigenvalues = np.maximum(eigenvalues, 0)
+
+    # Normalize eigenvalues. This ensures sum of normalized eigenvalues equals 1
+    normalized_eigenvalues = eigenvalues / eigenvalues.sum()
+
+    # Calculate hypergraph entropy using the formula given in the image
+    # Note: The `where` condition ensures correct handling of log(0)
+    entropy = -np.sum(np.where(normalized_eigenvalues > 0, normalized_eigenvalues * np.log(normalized_eigenvalues), 0))
+
+    return entropy
+
+
+def hypergraph_laplacian(H):
+    """
+    Calculates the unnormalized hypergraph Laplacian matrix L from a binary incidence matrix H.
+
+    This function efficiently computes the unnormalized hypergraph Laplacian using sparse matrix 
+    operations, handling both dense and sparse input matrices. It automatically converts dense 
+    input to a sparse format for computational efficiency.
+
+    The unnormalized hypergraph Laplacian is defined as:
+
+        L = D - H @ E^-1 @ H^T
+
+    where:
+        - D is the diagonal matrix of node degrees (number of hyperedges each node participates in)
+        - H is the binary incidence matrix of the hypergraph (rows are nodes, columns are hyperedges)
+        - E is the diagonal matrix of hyperedge degrees (number of nodes in each hyperedge)
+        - @ denotes matrix multiplication
+
+    Args:
+        H: A numpy array or pandas DataFrame representing the binary incidence matrix of the hypergraph.
+            - Each row represents a node.
+            - Each column represents a hyperedge.
+            - H[i, j] is 1 if node i is in hyperedge j, and 0 otherwise.
+
+    Returns:
+        L: The unnormalized hypergraph Laplacian matrix as a sparse CSR (Compressed Sparse Row) matrix.
+
+    Note:
+        This function calculates the unnormalized Laplacian. For the normalized Laplacian, see the 
+        'hypergraph_normalized_laplacian' function.
+    """
+
+    H = sparse.csr_matrix(H)  # Convert to sparse CSR matrix for efficiency
+
+    # Get hyperedge degrees (column sums)
+    E_diag = H.sum(axis=0).A1  # Extract diagonal as 1D array
+    E_inv = sparse.diags(np.where(E_diag > 0, 1 / E_diag, 0))  # Sparse inverse diagonal matrix
+
+    # Get node degrees (row sums)
+    D_diag = H.sum(axis=1).A1  
+
+    # Calculate the unnormalized hypergraph Laplacian
+    L = sparse.diags(D_diag) - H @ E_inv @ H.T 
+
+    return L
+
+
+def normalized_hypergraph_laplacian(H):
+    """
+    Calculates the normalized hypergraph Laplacian matrix L from a binary incidence matrix H.
+
+    This function efficiently computes the normalized hypergraph Laplacian using sparse matrix
+    operations, handling both dense and sparse input matrices. It automatically converts dense
+    input to a sparse format for computational efficiency.
+
+    The normalized hypergraph Laplacian is defined as:
+
+        L = I - D^(-1/2) H E^(-1) H^T D^(-1/2)
+
+    where:
+        - I is the identity matrix
+        - D is the diagonal matrix of node degrees (number of hyperedges each node participates in)
+        - H is the binary incidence matrix of the hypergraph (rows are nodes, columns are hyperedges)
+        - E is the diagonal matrix of hyperedge degrees (number of nodes in each hyperedge)
+        - @ denotes matrix multiplication
+        - ^(-1/2) denotes the inverse square root of a diagonal matrix
+
+    Args:
+        H: A numpy array or pandas DataFrame representing the binary incidence matrix of the hypergraph.
+            - Each row represents a node.
+            - Each column represents a hyperedge.
+            - H[i, j] is 1 if node i is in hyperedge j, and 0 otherwise.
+
+    Returns:
+        L: The normalized hypergraph Laplacian matrix as a sparse CSR (Compressed Sparse Row) matrix.
+    """
+
+    H = sparse.csr_matrix(H)  # Convert to sparse CSR matrix if necessary
+
+    # Get read degrees (column sums)
+    E_diag = H.sum(axis=0).A1  # Extract diagonal as 1D array
+    E_inv = sparse.diags(np.where(E_diag > 0, 1 / E_diag, 0))  # Sparse inverse diagonal matrix
+
+    # Get node degrees and normalize
+    D_diag = H.sum(axis=1).A1
+    D_hat_inv_sqrt = sparse.diags(np.where(D_diag > 0, 1 / np.sqrt(D_diag), 0))
+
+    # Identity matrix
+    I = sparse.eye(H.shape[0], format="csr")
+
+    # Higher-order Laplacian (using sparse matrix multiplication)
+    L = I - D_hat_inv_sqrt @ H @ E_inv @ H.T @ D_hat_inv_sqrt
+
+    return L
+
+
+def estimate_fiedler(L):
+    """Estimates the Fiedler value (algebraic connectivity) of a graph.
+
+    The Fiedler value is the second smallest eigenvalue of the normalized Laplacian matrix.
+    It provides insights into the graph's connectivity and robustness.
+
+    Args:
+        L (scipy.sparse matrix): The normalized Laplacian matrix of the graph.
+
+    Returns:
+        float: The estimated Fiedler value.
+    """
+    min_shape = 5
+    if L.shape[0] < min_shape or L.shape[1] < min_shape:
+        return 0
+    else:
+        fiedler_value, _ = sparse.linalg.eigs(L, k=2, which='SM')  
+        return fiedler_value[1].real
 
 
 def larntzPerlman(M1, M2, sample_size, alpha=0.05):

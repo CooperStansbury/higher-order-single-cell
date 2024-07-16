@@ -19,4 +19,4 @@ conda env export > environment.yml
 cp Snakefile workflow.smk
 
 # run it
-snakemake --profile ${CONFIG} --use-conda --cores ${CORES} --rerun-incomplete --latency-wait 90 --verbose -s workflow.smk 
+snakemake --profile ${CONFIG} --use-conda --cores ${CORES} --rerun-triggers mtime --rerun-incomplete --latency-wait 90 --verbose -s workflow.smk 

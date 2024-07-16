@@ -26,6 +26,8 @@ rule all:
         OUTPUT + "reference/scenic.parquet",
         OUTPUT + "reference/gene_table.parquet",
         OUTPUT + "rna/expression.parquet",
+        expand(OUTPUT + "1D_features/ATAC_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+        expand(OUTPUT + "1D_features/CTCF_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
         expand(OUTPUT + "population_hic/{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
         expand(OUTPUT + "population_pore_c/{chr}_{res}_incidence.parquet", chr=chrom_names, res=resolutions),
         expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
@@ -112,6 +114,40 @@ rule get_rna:
         'bioinf'
     shell:
         """python scripts/get_expression_data.py {input.gene_table} {output} {input.tables} """
+        
+         
+ATAC_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/ATACSeq/"
+ATAC_batches = [
+    '4DNFIPVAKPXA',
+    '4DNFIXT1TVT4',
+    '4DNFI3ARZKH6',
+]
+
+rule get_atac_data:
+    input:
+        tables = expand(ATAC_ROOT + "{id}.bw", id=ATAC_batches),
+    output:
+        OUTPUT + "1D_features/ATAC_{chr}_{res}.parquet"
+    conda:
+        'bioinf'
+    shell:
+        """python scripts/bigwig_to_df.py {output} {wildcards.chr} {wildcards.res} {input.tables} """
+        
+        
+          
+CTCF_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/CTCF/"
+CTCF_batches = [
+    '4DNFIFFXFV82',
+]       
+rule get_ctcf_data:
+    input:
+        tables = expand(CTCF_ROOT + "{id}.bw", id=CTCF_batches),
+    output:
+        OUTPUT + "1D_features/CTCF_{chr}_{res}.parquet"
+    conda:
+        'bioinf'
+    shell:
+        """python scripts/bigwig_to_df.py {output} {wildcards.chr} {wildcards.res} {input.tables} """
         
  
 rule get_schic_fends:

@@ -7,6 +7,113 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
 import io
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib_venn import venn3
+
+def plot_venn3_from_df(df, col1, col2, col3, set_labels=None, title="Venn Diagram"):
+    """Plots a 3-way Venn diagram from boolean columns in a DataFrame.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the boolean columns.
+        col1, col2, col3 (str): Names of the columns to use for the Venn diagram.
+        set_labels (list, optional): Labels for the sets (defaults to column names).
+        title (str, optional): Title for the Venn diagram.
+    """
+    
+    # Calculate values for each region of the Venn diagram
+    set1 = df[col1].sum()
+    set2 = df[col2].sum()
+    set3 = df[col3].sum()
+    
+    set1_only = ((df[col1]) & ~(df[col2]) & ~(df[col3])).sum()
+    set2_only = ((df[col2]) & ~(df[col1]) & ~(df[col3])).sum()
+    set3_only = ((df[col3]) & ~(df[col1]) & ~(df[col2])).sum()
+    
+    set12 = ((df[col1]) & (df[col2]) & ~(df[col3])).sum()
+    set13 = ((df[col1]) & (df[col3]) & ~(df[col2])).sum()
+    set23 = ((df[col2]) & (df[col3]) & ~(df[col1])).sum()
+    
+    set123 = ((df[col1]) & (df[col2]) & (df[col3])).sum()
+
+    # Create the Venn diagram
+    if set_labels is None:
+        set_labels = (col1, col2, col3)  # Use column names as default labels
+
+    plt.figure(figsize=(8, 8))
+    venn3(subsets=(set1_only, 
+                   set2_only,
+                   set12,
+                   set3_only,
+                   set13,
+                   set23, 
+                   set123), set_labels=set_labels)
+    
+    
+
+def find_best_azim(X, Y, Z):
+    """Finds the azimuth angle that maximizes projected variance."""
+    points = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
+    centered = points - np.mean(points, axis=0)
+    _, _, V = np.linalg.svd(centered)
+    best_azim = np.arctan2(V[0, 1], V[0, 0]) * 180 / np.pi
+    return best_azim
+
+
+
+def plot_3d_surface(data: pd.DataFrame, x_col: str, y_col: str, z_col: str, plot_kwargs=None, perspective_kwargs=None):
+    """
+    Creates a 3D surface plot from a Pandas DataFrame.
+
+    Args:
+        data (pd.DataFrame): DataFrame containing the data for the plot.
+        x_col (str): Name of the column to use for the x-axis.
+        y_col (str): Name of the column to use for the y-axis.
+        z_col (str): Name of the column to use for the z-axis (and color).
+        plot_kwargs (dict, optional): Keyword arguments for `ax.plot_surface`.
+            Commonly used options:
+                * cmap: Colormap to use (default: 'viridis').
+        perspective_kwargs (dict, optional): Keyword arguments for `ax.view_init` and `ax.set_box_aspect`.
+            Commonly used options:
+                * figsize: Tuple (width, height) in inches (default: (8, 6)).
+                * elev: Elevation angle in degrees (default: 30).
+                * azim: Azimuthal angle in degrees (default: -60).
+                * zoom: Float value controlling the zoom level (default: 0.9).
+    """
+    if plot_kwargs is None:
+        plot_kwargs = {}
+    if perspective_kwargs is None:
+        perspective_kwargs = {}
+
+    fig = plt.figure(figsize=perspective_kwargs.get('figsize', (10, 8)))
+    ax = fig.add_subplot(111, projection='3d', computed_zorder=False)
+
+    # Data extraction and meshgrid creation
+    x = data[x_col].values
+    y = data[y_col].values
+    z = data[z_col].values
+    X, Y = np.meshgrid(np.unique(x), np.unique(y))
+    Z = z.reshape(X.shape)
+
+    # Create the surface plot
+    surf = ax.plot_surface(X, Y, Z, **plot_kwargs)
+    # fig.colorbar(surf, shrink=0.3, pad=0.2)
+
+    # Improved axis labels
+    ax.set_xlabel(f"{x_col.replace('_', ' ').title()}")
+    ax.set_ylabel(f"{y_col.replace('_', ' ').title()}")
+    ax.set_zlabel(f"{z_col.replace('_', ' ').title()}")
+    
+    if not 'azim' in perspective_kwargs:
+        azim = find_best_azim(X, Y, Z)
+    else:
+        azim = -60
+        
+    # Set view perspective
+    ax.view_init(elev=perspective_kwargs.get('elev', 30), 
+                 azim=perspective_kwargs.get('azim', azim))
+    zoom = perspective_kwargs.get('zoom', 0.9)  
+    ax.set_box_aspect(aspect=None, zoom=zoom) 
+    
 
 def plot_incidence_order(I, xlabel="Order (Unique 1Mb Bins)"):
     """Calculates degree statistics and generates a histogram.
