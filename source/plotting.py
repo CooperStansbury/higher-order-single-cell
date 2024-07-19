@@ -10,6 +10,51 @@ import io
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib_venn import venn3
 
+
+def make_colorbar(cmap='viridis', 
+                  width=0.2,
+                  height=2.5, 
+                  title='', 
+                  orientation='vertical', 
+                  tick_labels=[0, 1]):
+    """
+    Creates and displays a standalone colorbar using Matplotlib.
+
+    Args:
+        cmap (str or matplotlib.colors.Colormap): The colormap to use for the colorbar.
+        width (float): The width of the colorbar figure in inches.
+        height (float): The height of the colorbar figure in inches.
+        title (str): The title to display above or next to the colorbar.
+        orientation (str): The orientation of the colorbar ('vertical' or 'horizontal').
+        tick_labels (list of str): The labels to display at each tick on the colorbar.
+
+    Returns:
+        None: This function displays the colorbar directly using Matplotlib.
+
+    Raises:
+        ValueError: If the `orientation` is not 'vertical' or 'horizontal'.
+    """
+    
+    a = np.array([[0, 1]])  # Dummy data for the image
+    plt.figure(figsize=(width, height))
+    img = plt.imshow(a, cmap=cmap)
+    plt.gca().set_visible(False)  # Hide the axes of the image
+    cax = plt.axes([0.1, 0.2, 0.8, 0.6])  # Define the colorbar position
+
+    ticks = np.linspace(0, 1, len(tick_labels)) 
+    cbar = plt.colorbar(
+        orientation=orientation,
+        cax=cax,
+        label=title,
+        ticks=ticks
+    )
+
+    if orientation == 'vertical':
+        cbar.ax.set_yticklabels(tick_labels)
+    elif orientation == 'horizontal':
+        cbar.ax.set_xticklabels(tick_labels)
+        
+
 def plot_venn3_from_df(df, col1, col2, col3, set_labels=None, title="Venn Diagram"):
     """Plots a 3-way Venn diagram from boolean columns in a DataFrame.
 
