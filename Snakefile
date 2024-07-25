@@ -7,7 +7,54 @@ source_path = os.path.abspath("source/")
 sys.path.append(source_path)
 import utils as ut
 
+# GLOBAL VARIABLES
 OUTPUT = "/scratch/indikar_root/indikar1/shared_data/higher_order/"
+PORE_C_ROOT = "/scratch/indikar_root/indikar1/shared_data/population_pore_c/align_table/"
+PORE_C_BATCHES = ['batch01', 'batch02', 'batch03', 'batch04']
+         
+RNA_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/RNAseq/"
+RNA_batches = [
+    '4DNFI8CSCJWM',
+    '4DNFICXJQ3PA',
+    '4DNFI3YYNDKI',
+    '4DNFIPYGE7JR',
+    '4DNFIYTCHMIZ',
+    '4DNFIC269AEU',
+]
+
+rna_pool_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/"
+rna_pool_batches = [
+    '4DNFI12AUKQS',
+    '4DNFIFVPB94O',
+    '4DNFIUW8CG2I',
+    '4DNFIXOTRTRM',
+    '4DNFI4XVSIFH',
+    '4DNFIW5IZKYG',
+]
+
+ATAC_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/ATACSeq/"
+ATAC_batches = [
+    '4DNFIPVAKPXA',
+    '4DNFIXT1TVT4',
+    '4DNFI3ARZKH6',
+]
+          
+CTCF_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/CTCF/"
+CTCF_batches = [
+    '4DNFIFFXFV82',
+]   
+
+H3K27me3_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/H3K27me3/"
+H3K27me3_batches = [
+    '4DNFI7UN2C36',
+]     
+
+H3K27ac_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/H3K27ac/"
+H3K27ac_batches = [
+    '4DNFIXE23VC7',
+]    
+
+
 resolutions = ut.read_csv("config/resolutions.txt")['value'].astype(str).str.strip().values
 chromosomes = ut.read_csv("config/chromosomes.txt")['value'].astype(str).str.strip().values
 chrom_names = ["chr" + str(x) for x in chromosomes]
@@ -18,6 +65,11 @@ print(f"{resolutions}")
 print(f"{chrom_names}")
 print(f"{sc_hic_ids}")
 print(f"{sc_porec_ids}")
+
+
+##########################################################################################
+### RULES
+##########################################################################################
 
 rule all:
     input:
@@ -36,6 +88,7 @@ rule all:
         expand(OUTPUT + "population_pore_c/{chr}_{res}_incidence.parquet", chr=chrom_names, res=resolutions),
         expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
         expand(OUTPUT + "sc_porec/{scporec_id}_{chr}_{res}.parquet", scporec_id=sc_porec_ids, chr=chrom_names, res=resolutions),
+
 
 
 rule get_pop_hic:
@@ -88,8 +141,6 @@ rule get_gene_annotations:
         """python scripts/get_gtf.py {input.gtf} {input.scenic} {output}"""
 
                 
-PORE_C_ROOT = "/scratch/indikar_root/indikar1/shared_data/population_pore_c/align_table/"
-PORE_C_BATCHES = ['batch01', 'batch02', 'batch03', 'batch04']
 rule get_population_pore_c:
     input:
         tables = expand(PORE_C_ROOT + "{batch}.GRCm39.align_table.parquet", batch=PORE_C_BATCHES),
@@ -121,16 +172,7 @@ rule population_pore_c_genes:
     shell:
          """python scripts/population_pore_c_gene_edges.py {input.gene_table} {wildcards.chr} {output} {input.tables}""" 
          
-         
-RNA_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/RNAseq/"
-RNA_batches = [
-    '4DNFI8CSCJWM',
-    '4DNFICXJQ3PA',
-    '4DNFI3YYNDKI',
-    '4DNFIPYGE7JR',
-    '4DNFIYTCHMIZ',
-    '4DNFIC269AEU',
-]
+
 
 rule get_rna:
     input:
@@ -145,15 +187,7 @@ rule get_rna:
         
 
 
-rna_pool_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/"
-rna_pool_batches = [
-    '4DNFI12AUKQS',
-    '4DNFIFVPB94O',
-    '4DNFIUW8CG2I',
-    '4DNFIXOTRTRM',
-    '4DNFI4XVSIFH',
-    '4DNFIW5IZKYG',
-]
+
 rule get_rna_pool_data:
     input:
         tables = expand(rna_pool_ROOT + "{id}.bw", id=rna_pool_batches),
@@ -169,12 +203,6 @@ rule get_rna_pool_data:
 
 
 
-ATAC_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/ATACSeq/"
-ATAC_batches = [
-    '4DNFIPVAKPXA',
-    '4DNFIXT1TVT4',
-    '4DNFI3ARZKH6',
-]
 rule get_atac_data:
     input:
         tables = expand(ATAC_ROOT + "{id}.bw", id=ATAC_batches),
@@ -189,11 +217,7 @@ rule get_atac_data:
         """python scripts/bigwig_to_df.py {output} {wildcards.chr} {wildcards.res} {input.tables} """
         
         
-          
-CTCF_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/CTCF/"
-CTCF_batches = [
-    '4DNFIFFXFV82',
-]       
+         
 rule get_ctcf_data:
     input:
         tables = expand(CTCF_ROOT + "{id}.bw", id=CTCF_batches),
@@ -208,10 +232,7 @@ rule get_ctcf_data:
         """python scripts/bigwig_to_df.py {output} {wildcards.chr} {wildcards.res} {input.tables} """
         
         
-H3K27me3_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/H3K27me3/"
-H3K27me3_batches = [
-    '4DNFI7UN2C36',
-]       
+  
 rule get_H3K27me3_data:
     input:
         tables = expand(H3K27me3_ROOT + "{id}.bw", id=H3K27me3_batches),
@@ -225,11 +246,7 @@ rule get_H3K27me3_data:
     shell:
         """python scripts/bigwig_to_df.py {output} {wildcards.chr} {wildcards.res} {input.tables} """
         
-        
-H3K27ac_ROOT = "/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/H3K27ac/"
-H3K27ac_batches = [
-    '4DNFIXE23VC7',
-]       
+           
 rule get_H3K27ac_data:
     input:
         tables = expand(H3K27ac_ROOT + "{id}.bw", id=H3K27ac_batches),
@@ -271,7 +288,7 @@ rule get_sc_hic:
 
 rule get_sc_porec:
     input:
-        table="/scratch/indikar_root/indikar1/shared_data/scpore_c/align_table/{sc_porec_id}.GRCm39.align_table.parquet",
+        table="/scratch/indikar_root/indikar1/shared_data/single_cell/align_table/{sc_porec_id}.GRCm39.align_table.parquet",
     output:
         OUTPUT + "sc_porec/{sc_porec_id}_{chr}_{res}.parquet"
     conda:

@@ -211,6 +211,33 @@ def larntzPerlman(M1, M2, sample_size, alpha=0.05):
     return hypothesis_accepted, p_values, s_matrix, overall_p_value
 
 
+def find_outlier_row_indices(matrix, threshold=1.5):
+    """
+    Identifies row indices in a square, symmetric matrix where the row sums are outliers.
+
+    This function calculates the z-scores of the row sums and flags rows whose absolute
+    z-score exceeds the specified threshold as outliers.
+
+    Args:
+        matrix (numpy.ndarray): A square, symmetric matrix.
+        threshold (float, optional): The z-score threshold for outlier detection. Defaults to 3.
+
+    Returns:
+        list: A list of row indices where the row sums are outliers.
+    """
+    # Calculate row sums
+    row_sums = matrix.sum(axis=0)
+
+    # Calculate z-scores
+    z_scores = np.abs(scipy.stats.zscore(row_sums))
+    # print(z_scores.sort_values(ascending=False))
+
+    # Identify outliers
+    outlier_indices = z_scores[z_scores > threshold].index.to_list()
+
+    return outlier_indices
+
+
 def handle_outliers(A, n):
     """Identifies and modifies outliers in a matrix.
 

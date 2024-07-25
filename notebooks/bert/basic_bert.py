@@ -68,7 +68,7 @@ class BasicBert:
             hidden_size=output_shape,
             num_hidden_layers=num_hidden_layers,
             num_attention_heads=num_attention_heads,
-            intermediate_size=output_shape * 2,
+            intermediate_size=output_shape * num_attention_heads,
             max_position_embeddings=self.max_length,
             output_hidden_states=True,
             **kwargs
