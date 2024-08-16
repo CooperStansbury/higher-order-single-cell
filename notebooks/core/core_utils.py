@@ -3,6 +3,51 @@ import os
 import pandas as pd
 import numpy as np
 import glob
+import pyBigWig
+
+
+def load_chromosome_feature(fpath: str, chrom: str, resolution: int) -> pd.DataFrame:
+    """
+    Converts a BigWig file to a DataFrame of summarized values.
+
+    Args:
+        fpath (str): Path to the input BigWig file.
+        chrom (str): Chromosome to analyze (e.g., "chr1").
+        resolution (int): Bin size for summarization (e.g., 1000 for 1kb bins).
+
+    Returns:
+        pd.DataFrame: A DataFrame containing file_id, bin_start, bin_end, and value columns.
+    """
+
+    with pyBigWig.open(fpath) as bw:
+        chrom_length = bw.chroms().get(chrom)
+
+        if not chrom_length:
+            raise ValueError(f"Chromosome '{chrom}' not found in {fpath}")
+
+        n_bins = int(np.ceil(chrom_length / resolution))
+
+        stats = bw.stats(chrom, nBins=n_bins, type='sum', exact=True)
+
+        # Create the bin start and end coordinates
+        # Assuming half-open intervals [start, end)
+        bin_starts = np.arange(0, chrom_length, resolution)
+        bin_ends = np.append(bin_starts[1:], chrom_length)
+        local_bin = list(range(len(bin_starts)))
+
+        file_id = os.path.basename(fpath).replace(".bw", "")
+
+        df = pd.DataFrame(
+            {
+                "file_id": file_id,
+                "local_bin" : local_bin,
+                "bin_start": bin_starts,
+                "bin_end": bin_ends,
+                "value": stats,
+            },
+        )
+
+        return df
 
 
 def load_chrom_sizes(fpath):
@@ -33,7 +78,7 @@ def load_chrom_sizes(fpath):
 
 
 
-def load_population_pore_c(dpath, chrom_starts, resolution=1e6, chroms=None):
+def load_pore_c(file_list, chrom_starts, resolution=1e6, chroms=None):
     """
     Loads and processes population Pore-C data from multiple Parquet files.
 
@@ -42,7 +87,7 @@ def load_population_pore_c(dpath, chrom_starts, resolution=1e6, chroms=None):
     mapped to specified chromosomes and with a minimum alignment order.
 
     Args:
-        dpath (str): Path to the directory containing the Parquet files.
+        file_list (str): list of ile paths containing the Parquet files.
         chrom_starts (dict): Dictionary mapping chromosome names to their start positions.
         resolution (float, optional): Binning resolution in base pairs. Defaults to 1e6.
         chroms (list, optional): List of chromosome names to include. If None, uses all chromosomes from chrom_starts.
@@ -58,8 +103,6 @@ def load_population_pore_c(dpath, chrom_starts, resolution=1e6, chroms=None):
             - local_bin
             - basename
     """
-    
-    file_list = glob.glob(f"{dpath}*")
     
     read_columns = [
         'read_name',
@@ -96,7 +139,7 @@ def load_population_pore_c(dpath, chrom_starts, resolution=1e6, chroms=None):
             .assign(
                 local_position  = lambda df: ((df['ref_end'] - df['ref_start']) // 2) + df['ref_start'],
                 chrom_start     = lambda df: df['chrom'].map(chrom_starts),
-                global_position = lambda df: df['chrom_start'] + df['local_position'],
+                global_position = lambda df: df['chrom_start'].astype(float) + df['local_position'].astype(float),
                 global_bin      = lambda df: df['global_position'].apply(lambda x: int(np.ceil(x / resolution))),
                 local_bin       = lambda df: df['local_position'].apply(lambda x: int(np.ceil(x / resolution))),
                 basename        = basename
@@ -108,6 +151,10 @@ def load_population_pore_c(dpath, chrom_starts, resolution=1e6, chroms=None):
         # calculate order and drop singletons efficiently
         tmp['order'] = tmp.groupby('read_name')['global_bin'].transform('nunique')
         tmp = tmp[tmp['order'] > 1]
+        
+        # handle single-cell
+        if tmp.empty:
+            continue
         
         tmp = tmp[keep_columns]
         print(basename, tmp.shape)
