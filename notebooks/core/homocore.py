@@ -586,7 +586,7 @@ def edge_core_alg(G):
             #print(f'ALL POSS MAPPINGS: {possible_maps}')
             print('these are the possible maps: ', possible_maps)
             
-           '''
+            '''
            #VERSION 2
             while len(possible_maps) > 0:
                 print('Possible mappings to check', len(possible_maps))
@@ -601,6 +601,7 @@ def edge_core_alg(G):
                     break
                 possible_maps = new_possible_maps
             '''
+            
 
             '''
             #VERSION 1
