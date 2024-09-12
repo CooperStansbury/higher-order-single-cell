@@ -4,6 +4,160 @@ import pandas as pd
 import numpy as np
 import glob
 import pyBigWig
+import matplotlib.pyplot as plt
+from matplotlib import patches
+import seaborn as sns
+import pandas as pd
+import numpy as np
+import random
+from scipy import sparse
+from scipy.stats import qmc
+
+
+def generate_params(parameters, num_samples):
+    """
+    Generates Latin Hypercube samples for the given parameters and ranges.
+
+    Args:
+        parameters (dict): Dict of parameters
+        num_samples (int): Number of samples to generate.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the generated samples, with columns named after the parameters.
+    """
+    parameter_names = list(parameters.keys())
+    parameter_ranges = list(parameters.values())
+
+    # Create a Latin Hypercube sampling engine
+    sampler = qmc.LatinHypercube(d=len(parameter_names))
+
+    # Generate samples in the [0, 1] range
+    sample_points = sampler.random(n=num_samples)
+
+    # Scale the samples to the actual parameter ranges
+    scaled_samples = qmc.scale(
+        sample_points, 
+        l_bounds=[r[0] for r in parameter_ranges], 
+        u_bounds=[r[1] for r in parameter_ranges])
+
+    # Create a DataFrame from the scaled samples
+    df = pd.DataFrame(scaled_samples, columns=parameter_names)
+    df['key'] = list(range(len(df)))
+
+    return df
+
+
+
+def generate_core_periphery_hypergraph(num_core_nodes, num_periphery_nodes,
+                                      edge_probability_core, edge_probability_periphery,
+                                      avg_edge_size, core_periphery_probability):
+    """
+    This function generates a random hypergraph with a core-periphery structure and creates its binary incidence matrix.
+
+    Args:
+      num_core_nodes: Number of nodes in the core.
+      num_periphery_nodes: Number of nodes in the periphery.
+      edge_probability_core: Probability of an edge forming between core nodes.
+      edge_probability_periphery: Probability of an edge forming between periphery nodes.
+      avg_edge_size: Average number of nodes per edge.
+      core_periphery_probability: Probability of an edge forming between a core node and a periphery node.
+
+    Returns:
+      A tuple containing four elements:
+          * core_nodes: List of core nodes.
+          * periphery_nodes: List of periphery nodes.
+          * edges: List of edges.
+          * incidence_matrix: Binary incidence matrix as a NumPy array.
+    """
+    # Define core and periphery nodes
+    core_nodes = list(range(num_core_nodes))
+    periphery_nodes = list(range(num_core_nodes, num_core_nodes + num_periphery_nodes))
+
+    # Get total number of nodes
+    total_nodes = len(core_nodes) + len(periphery_nodes)
+
+    # Generate edges
+    edges = []
+    for _ in range(int(len(core_nodes) * edge_probability_core)):
+        # Sample core nodes for an edge
+        edge = random.sample(core_nodes, k=int(avg_edge_size))
+        edges.append(edge)
+
+    for _ in range(int(len(periphery_nodes) * edge_probability_periphery)):
+        # Sample periphery nodes for an edge
+        edge = random.sample(periphery_nodes, k=int(avg_edge_size))
+        edges.append(edge)
+
+    # Add edges between core and periphery nodes
+    for _ in range(int(num_core_nodes * num_periphery_nodes * core_periphery_probability)):
+        # Sample a core node and a periphery node
+        core_node = random.choice(core_nodes)
+        periphery_node = random.choice(periphery_nodes)
+        # Create an edge with the core and periphery node
+        edge = [core_node, periphery_node]
+        # Optionally, you can sample additional nodes for the edge
+        if avg_edge_size > 2:
+            additional_nodes = random.sample(core_nodes + periphery_nodes, k=int(avg_edge_size) - 2)
+            edge.extend(additional_nodes)
+            
+        edges.append(edge)
+
+    # Create empty matrix
+    incidence_matrix = np.zeros((total_nodes, len(edges)), dtype=int)
+
+    # Fill the matrix with 1s for corresponding nodes in each edge
+    for i, edge in enumerate(edges):
+        for node in edge:
+            incidence_matrix[node, i] = 1
+
+    return core_nodes, periphery_nodes, edges, incidence_matrix
+
+
+
+def plot_hypergraph(H, core_nodes=None):
+    """
+    Plots a hypergraph representation.
+
+    Args:
+        H: A pandas DataFrame representing the hypergraph incidence matrix.
+        core_nodes: An optional list of node labels considered "core". 
+                     These will be highlighted in the plot.
+    """
+
+    if core_nodes is None:
+        core_nodes = []  # Default to an empty list if not provided
+
+    for i, column in enumerate(H.columns):
+        hyperedge = H[column][H[column] > 0]
+        order = len(hyperedge)
+        x_ind = np.ones(order) * (i + 1)
+
+        c = np.where(hyperedge.index.isin(core_nodes), 'r', 'blue')
+
+        # Plot nodes
+        plt.scatter(
+            x_ind, 
+            hyperedge.index, 
+            s=50, 
+            c=c, 
+            ec='k', 
+            zorder=3, 
+            label='Core' if c[0] == 'r' else 'Periphery')
+
+        # Plot edges (connecting lines)
+        plt.plot(x_ind, hyperedge.index, c='k')
+
+    # Customize axes and labels
+    plt.yticks(H.index, H.index + 1)  # Adjust node labels if needed
+    plt.xticks([])
+    plt.gca().invert_yaxis()
+    plt.ylabel('Nodes')
+    plt.xlabel('Hyperedges')
+
+    # Add legend 
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys(), loc='best')
 
 
 def load_chromosome_feature(fpath: str, chrom: str, resolution: int) -> pd.DataFrame:
