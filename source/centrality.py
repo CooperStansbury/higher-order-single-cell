@@ -2,6 +2,25 @@ import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
+def unique_upto_tol(arr, tol):
+    # Sort the array
+    sorted_arr = np.sort(arr)
+    
+    # Initialize the list for unique values
+    unique_arr = []
+    
+    # Add the first element
+    if sorted_arr.size > 0:
+        unique_arr.append(sorted_arr[0])
+    
+    # Iterate through the sorted array
+    for num in sorted_arr[1:]:
+        # Compare with the last added unique number
+        if num - unique_arr[-1] > tol:
+            unique_arr.append(num)
+    
+    return np.array(unique_arr)
+
 
 def nl_centrality_func(B, 
                        f=lambda x: x,
@@ -13,7 +32,8 @@ def nl_centrality_func(B,
                        edge_weights=None,
                        node_weights=None,
                        mynorm=lambda x: np.linalg.norm(x, 1), 
-                       verbose=False):
+                       verbose=False,
+                       eigvals = True):
     """
     Computes centrality measures using SparseArrays and iterative algorithm.
 
@@ -56,15 +76,24 @@ def nl_centrality_func(B,
         if check < tol:
             if verbose:
                 print(f"{it} ===")
-            return x.flatten(), y.flatten()
+                x0 = x.copy()
+                y0 = y.copy()
+                break
+            #return x.flatten(), y.flatten()
 
         x0 = x.copy()
         y0 = y.copy()
+        rhs1 = g(B@W@f(y0))
+        rhs2 = psi(B.T @ N @ phi(x0))
 
+    node_eval = rhs1/x0
+    edge_eval = rhs2/y0
+
+    node_eval = unique_upto_tol(np.unique(node_eval[~np.isnan(node_eval)]), tol).flatten()
+    edge_eval = unique_upto_tol(np.unique(edge_eval[~np.isnan(edge_eval)]), tol).flatten()
     if verbose:
         print(f"Warning: Centrality did not reach tol = {tol} in {maxiter} iterations\n------- Relative error reached so far = {check}")
-    return x0.flatten(), y0.flatten()
-
+    return x0.flatten(), y0.flatten(), node_eval[0], edge_eval[0]
 
 def nonlinear_eigenvector_centrality(B, 
                                      function='linear',
