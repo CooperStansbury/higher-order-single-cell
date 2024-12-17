@@ -1,0 +1,32 @@
+outpath: "/scratch/indikar_root/indikar1/shared_data/higher_order/"
+chrom_sizes: "/nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/population/references/GRCm39.chrom.sizes"
+pop_pore_c_path: "/nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/population/align_table/"
+sc_pore_c_path: "/nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/single_cell/align_table/"
+scenic_path: "/nfs/turbo/umms-indikar/shared/projects/DGC/data/processed_data/MOUSE_500bp_up_100bp_down_B.csv"
+gtf_path: "/scratch/indikar_root/indikar1/shared_data/scpore_c/gtf/GRCm39.gtf.gz"
+feature_paths: "config/linear_features.txt"
+resolutions:
+    - 10000
+    - 100000
+    - 1000000
+chromosomes:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '7'
+    - '8'
+    - '9'
+    - '10'
+    - '11'
+    - '12'
+    - '13'
+    - '14'
+    - '15'
+    - '16'
+    - '17'
+    - '18'
+    - '19'
+    - 'X'

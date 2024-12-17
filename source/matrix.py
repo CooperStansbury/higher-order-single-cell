@@ -7,6 +7,7 @@ import scipy.sparse as sps
 from scipy.sparse import csr_matrix
 from scipy.sparse import issparse
 from scipy.stats import chi2
+from scipy.sparse import diags
 
 
 def hypergraph_entropy(L):
@@ -317,6 +318,39 @@ def normalize_oe(matrix):
     normalized_matrix = np.divide(matrix, toeplitz_matrix)
     np.nan_to_num(normalized_matrix, copy=False, nan=0.0)
     return normalized_matrix
+
+
+def normalize_oe_sparse(matrix):
+    """Normalizes a symmetric matrix (sparse or dense) by its Toeplitz expectation.
+    Optimizes calculations assuming symmetry.
+
+    Args:
+        matrix (np.ndarray or scipy.sparse.spmatrix): The input symmetric matrix to be normalized.
+
+    Returns:
+        scipy.sparse.spmatrix: The normalized matrix in sparse format.
+    """
+    def calculate_diagonal_means(matrix):
+        """Calculates the mean values from the upper triangular diagonals."""
+        diag_means = []
+        for offset in range(matrix.shape[0]):
+            if hasattr(matrix, 'diagonal'):  # For dense matrices
+                diag = matrix.diagonal(k=offset)
+            else:  # For sparse matrices
+                diag = matrix.diagonal(k=offset)
+            diag_means.append(np.mean(diag))
+        return diag_means
+
+    diagonal_means = calculate_diagonal_means(matrix)
+    toeplitz_matrix = toeplitz(diagonal_means)
+
+    # Convert toeplitz_matrix to sparse for efficient division
+    toeplitz_matrix = diags(toeplitz_matrix.diagonal(), format='csc')
+
+    # Use sparse division and fill NaN values
+    normalized_matrix = matrix / toeplitz_matrix
+    np.nan_to_num(normalized_matrix, copy=False, nan=0.0)
+    return csr_matrix(normalized_matrix)
 
 
 def convert_to_csr(data):

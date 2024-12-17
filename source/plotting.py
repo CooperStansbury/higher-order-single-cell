@@ -8,7 +8,7 @@ import seaborn as sns
 from PIL import Image
 import io
 from mpl_toolkits.mplot3d import Axes3D
-from matplotlib_venn import venn3
+# from matplotlib_venn import venn3
 
 
 def make_colorbar(cmap='viridis', 
@@ -55,43 +55,43 @@ def make_colorbar(cmap='viridis',
         cbar.ax.set_xticklabels(tick_labels)
         
 
-def plot_venn3_from_df(df, col1, col2, col3, set_labels=None, title="Venn Diagram"):
-    """Plots a 3-way Venn diagram from boolean columns in a DataFrame.
+# def plot_venn3_from_df(df, col1, col2, col3, set_labels=None, title="Venn Diagram"):
+#     """Plots a 3-way Venn diagram from boolean columns in a DataFrame.
 
-    Args:
-        df (pd.DataFrame): DataFrame containing the boolean columns.
-        col1, col2, col3 (str): Names of the columns to use for the Venn diagram.
-        set_labels (list, optional): Labels for the sets (defaults to column names).
-        title (str, optional): Title for the Venn diagram.
-    """
+#     Args:
+#         df (pd.DataFrame): DataFrame containing the boolean columns.
+#         col1, col2, col3 (str): Names of the columns to use for the Venn diagram.
+#         set_labels (list, optional): Labels for the sets (defaults to column names).
+#         title (str, optional): Title for the Venn diagram.
+#     """
     
-    # Calculate values for each region of the Venn diagram
-    set1 = df[col1].sum()
-    set2 = df[col2].sum()
-    set3 = df[col3].sum()
+#     # Calculate values for each region of the Venn diagram
+#     set1 = df[col1].sum()
+#     set2 = df[col2].sum()
+#     set3 = df[col3].sum()
     
-    set1_only = ((df[col1]) & ~(df[col2]) & ~(df[col3])).sum()
-    set2_only = ((df[col2]) & ~(df[col1]) & ~(df[col3])).sum()
-    set3_only = ((df[col3]) & ~(df[col1]) & ~(df[col2])).sum()
+#     set1_only = ((df[col1]) & ~(df[col2]) & ~(df[col3])).sum()
+#     set2_only = ((df[col2]) & ~(df[col1]) & ~(df[col3])).sum()
+#     set3_only = ((df[col3]) & ~(df[col1]) & ~(df[col2])).sum()
     
-    set12 = ((df[col1]) & (df[col2]) & ~(df[col3])).sum()
-    set13 = ((df[col1]) & (df[col3]) & ~(df[col2])).sum()
-    set23 = ((df[col2]) & (df[col3]) & ~(df[col1])).sum()
+#     set12 = ((df[col1]) & (df[col2]) & ~(df[col3])).sum()
+#     set13 = ((df[col1]) & (df[col3]) & ~(df[col2])).sum()
+#     set23 = ((df[col2]) & (df[col3]) & ~(df[col1])).sum()
     
-    set123 = ((df[col1]) & (df[col2]) & (df[col3])).sum()
+#     set123 = ((df[col1]) & (df[col2]) & (df[col3])).sum()
 
-    # Create the Venn diagram
-    if set_labels is None:
-        set_labels = (col1, col2, col3)  # Use column names as default labels
+#     # Create the Venn diagram
+#     if set_labels is None:
+#         set_labels = (col1, col2, col3)  # Use column names as default labels
 
-    plt.figure(figsize=(8, 8))
-    venn3(subsets=(set1_only, 
-                   set2_only,
-                   set12,
-                   set3_only,
-                   set13,
-                   set23, 
-                   set123), set_labels=set_labels)
+#     plt.figure(figsize=(8, 8))
+#     venn3(subsets=(set1_only, 
+#                    set2_only,
+#                    set12,
+#                    set3_only,
+#                    set13,
+#                    set23, 
+#                    set123), set_labels=set_labels)
     
     
 
