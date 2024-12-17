@@ -16,9 +16,13 @@ if __name__ == "__main__":
     
     read_columns = [
         'read_name',
-        'chrom', 
-        'ref_start', 
+        'read_start', 
+        'read_end',
+        'length_on_read',
+        'chrom',
+        'ref_start',
         'ref_end',
+        'mapping_quality',
         'is_mapped',
     ]
      
