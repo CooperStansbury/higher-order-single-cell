@@ -40,6 +40,50 @@ def print_sparsity(sparsity):
     print_parameter("Sparsity of X:", f"{sparsity:.2%}")
 
 
+def merge_genes(df, gdf):
+    """Merges gene data from a Parquet file into a DataFrame.
+
+    Args:
+        df: DataFrame with genomic intervals ('chrom', 'ref_start', 'ref_end').
+        gdf: DataFrame with gene data.
+
+    Returns:
+        DataFrame with added gene information.
+    """
+    # Use PyRanges for efficient interval joining
+    gdf_pr = pr.PyRanges(gdf)
+    df_pr = pr.PyRanges(df.rename(columns={
+        'chrom': 'Chromosome',
+        'ref_start': 'Start',
+        'ref_end': 'End',
+    }))
+
+    # Join dataframes, keeping all original intervals
+    df = df_pr.join(
+        gdf_pr,
+        strandedness=None,
+        how='left',
+        report_overlap=True,
+    ).df.rename(columns={
+        'Chromosome': 'chrom',
+        'Start': 'ref_start',
+        'End': 'ref_end',
+        'Start_b': 'gene_start',
+        'End_b': 'gene_end',
+        'length': 'gene_length',
+        'Overlap': 'gene_overlap',
+    })
+
+    # Select the best overlap for each interval
+    df = df.sort_values(by='gene_overlap', ascending=False)
+    df = df.drop_duplicates(subset=['read_name', 'read_start', 'ref_start', 'basename'], keep='first')
+
+    # Ensure correct data types
+    df['is_tf'] = df['is_tf'].astype(bool)
+    df['is_pt_gene'] = (df['gene_biotype'] == 'protein_coding')
+    return df
+
+
 def get_intervals(bp, resolution):
     """Generates non-overlapping intervals within a given range.
 
@@ -140,10 +184,14 @@ def join_intervals_pyranges(df, intervals):
         'End': 'ref_end',
         'Start_b': 'bin_start',
         'End_b': 'bin_end',
-        'Overlap': 'overlap',
+        'Overlap': 'bin_overlap',
     }
 
     df = df.rename(columns=result_columns)
+
+    # Select the best overlap for each interval
+    df = df.sort_values(by='bin_overlap', ascending=False)
+    df = df.drop_duplicates(subset=['read_name', 'read_start', 'ref_start', 'basename'], keep='first')
 
     # Add index identifiers
     df['read_index'] = pd.factorize(df['read_name'])[0]
@@ -176,7 +224,7 @@ def create_X(df):
   var_names = df['read_index'].unique()
 
   X = csr_matrix((data, (row, col)), shape=(n, m))
-  print(f"{X.shape=}")
+  X = csr_matrix((X > 0).astype(int))
   return X, obs_names, var_names
 
 
@@ -193,6 +241,9 @@ def create_var_df(df, var_names):
   """
   var = df.copy()
 
+  gene_list = lambda x: ";".join([i for i in set(x) if i != '-1'])
+  n_genes = lambda x: len([i for i in set(x) if i != '-1'])
+
   var = var.groupby(['basename', 'read_name', 'read_index']).agg(
       mean_mapq=('mapping_quality', 'mean'),
       median_mapq=('mapping_quality', 'median'),
@@ -200,6 +251,8 @@ def create_var_df(df, var_names):
       order=('order', 'first'),
       n_bins=('bin', 'nunique'),
       read_length_bp=('length_on_read', 'sum'),
+      genes=('gene_name', gene_list),
+      n_genes=('gene_name', n_genes),
   ).reset_index()
 
   # Ensure proper sorting using var_names
@@ -211,146 +264,54 @@ def create_var_df(df, var_names):
   return var
 
 
-def create_obs_df(df, X):
-  """Creates an observation DataFrame from a DataFrame and a sparse matrix.
+def create_obs_df(df, obs_names):
+  """Create a DataFrame with observation information.
 
   Args:
-    df (pandas.DataFrame): DataFrame with genomic data and bin information.
-    X (scipy.sparse.csr_matrix): Sparse matrix representation of the data.
+    df: DataFrame with genomic data and bin information.
+    obs_names: List of observation names to ensure proper sorting.
 
   Returns:
-    pandas.DataFrame: DataFrame containing observation information.
+    DataFrame containing observation information.
   """
-  obs_columns = [
-      'chrom',
-      'bin_start',
-      'bin_end',
-      'bin',
-      'bin_name',
-      'bin_index',
-      'chrom_bin',
-  ]
-  obs = df[obs_columns].drop_duplicates()
-  print(f"{obs.shape=}")
+  gene_list = lambda x: ";".join([i for i in set(x) if i != '-1'])
+  n_genes = lambda x: len([i for i in set(x) if i != '-1'])
+    
+  obs = df.groupby('bin_name').agg(
+      bin_start=('bin_start', 'first'),
+      bin_end=('bin_end', 'first'),
+      bin=('bin', 'first'),
+      bin_index=('bin_index', 'first'),
+      chrom=('chrom', 'first'),
+      chrom_bin=('chrom_bin', 'first'),
+      degree=('read_name', 'nunique'),
+      genes=('gene_name', gene_list),
+      n_genes=('gene_name', n_genes),
+  ).reset_index()
 
-  # Add a column with the sum of reads per bin
-  obs['n_reads'] = X.sum(axis=1)
+  # Ensure proper sorting using var_names
+  obs = obs.set_index('bin_index')
+  obs = obs.reindex(obs_names)
+  obs = obs.reset_index()
+  obs = obs.set_index('bin_name')
 
-  print(f"{obs.shape=}")
   return obs
 
 
-def load_and_process_genes(fpath, obs):
-  """Loads gene data, joins it with observation data, and processes the result.
+def create_gene_map(df):
+  """Creates a gene map DataFrame.
 
   Args:
-    fpath (str): Path to the gene data file (Parquet format).
-    obs (pandas.DataFrame): DataFrame with observation data ('chrom', 'bin_start', 'bin_end').
+    df: DataFrame with gene information.
 
   Returns:
-    pandas.DataFrame: Processed DataFrame containing gene information and overlap with bins.
+    DataFrame containing the gene map with duplicates removed and '-1' gene names excluded.
   """
-  gdf = pd.read_parquet(fpath)
-  print(f"{gdf.shape=}")
+  gene_map = df[['gene_name', 'gene_biotype', 'read_name', 'bin_name']].drop_duplicates()
+  gene_map = gene_map[gene_map['gene_name'] != '-1']
+  gene_map = gene_map.reset_index(drop=True)
+  return gene_map
 
-  gdf_pr = pr.PyRanges(gdf)
-  obs_pr = pr.PyRanges(obs.rename(columns={
-      'chrom': 'Chromosome',
-      'bin_start': 'Start',
-      'bin_end': 'End',
-  }))
-
-  gdf = gdf_pr.join(
-      obs_pr,
-      strandedness=None,
-      how='left',
-      report_overlap=True,
-
-  ).df.rename(columns={
-      'Chromosome': 'chrom',
-      'Start': 'bin_start',
-      'End': 'bin_end',
-      'Start_b': 'gene_start',
-      'End_b': 'gene_end',
-      'length': 'gene_length',
-      'Overlap': 'overlap',
-  })
-
-  # Drop unalignable genes
-  gdf = gdf[gdf['bin'] >= 0].reset_index()
-
-  keep_columns = [
-      'gene_name',
-      'gene_id',
-      'gene_biotype',
-      'chrom',
-      'gene_length',
-      'is_tf',
-      'gene_start',
-      'gene_end',
-      'bin',
-      'bin_name',
-      'chrom_bin',
-      'overlap',
-  ]
-
-  gdf = gdf[keep_columns]
-  gdf['n_bins_spanned'] = gdf.groupby('gene_name')['bin'].transform('nunique')
-  gdf['is_tf'] = gdf['is_tf'].astype(bool)
-  gdf['is_pt_gene'] = (gdf['gene_biotype'] == 'protein_coding')
-  print(f"{gdf.shape=}")
-
-  return gdf
-
-
-def aggregate_gene_info(gdf, obs, obs_names):
-    """Aggregates gene information for each observation (bin).
-
-    Args:
-        gdf (pandas.DataFrame): DataFrame with gene information and bin assignments.
-        obs (pandas.DataFrame): DataFrame with observation data.
-        obs_names (pandas.Index): Index of unique bin names.
-
-    Returns:
-        pandas.DataFrame: Observation DataFrame with aggregated gene information.
-    """
-    gene_list = lambda x: ";".join(list(x))
-
-    # Aggregate gene information for each bin
-    obs_genes = gdf.groupby('bin').agg(
-        n_genes=('gene_name', 'nunique'),
-        n_tfs=('is_tf', 'sum'),
-        n_pt_genes=('is_pt_gene', 'sum'),
-        total_gene_bp=('overlap', 'sum'),
-        genes=('gene_name', gene_list),
-    ).reset_index()
-    print(f"{obs_genes.shape=}")
-
-    # Filter out bins not seen in Pore-C data
-    obs_genes = obs_genes[obs_genes['bin'].isin(obs['bin'].values)]
-    print(f"{obs_genes.shape=}")
-
-    # Merge aggregated gene data with the observation DataFrame
-    obs = pd.merge(
-        obs,
-        obs_genes,
-        how='left',
-        left_on='bin',
-        right_on='bin',
-    )
-
-    # Fill missing values and convert to integer
-    obs['n_genes'] = obs['n_genes'].fillna(0.0).astype(int)
-    obs['n_tfs'] = obs['n_tfs'].fillna(0.0).astype(int)
-    obs['total_len_bp'] = obs['total_gene_bp'].fillna(0.0).astype(int)
-
-    # Ensure proper sorting using obs_names
-    obs = obs.set_index('bin_index')
-    obs = obs.reindex(obs_names)
-    obs = obs.reset_index()
-    obs = obs.set_index('bin_name')
-
-    return obs
 
 
 if __name__ == "__main__":
@@ -385,62 +346,52 @@ if __name__ == "__main__":
     print_memory_usage("Create chromosome intervals")
 
     # map the genes at read level
-    print_section_header("Merging Gene Information")
+    print_section_header("Merging Gene Information with Pore-C (Read-level)")
+    gdf = pd.read_parquet(gene_path)
+    print_data_shape("Gene data (Genes added)", gdf.shape)
+    df = merge_genes(df, gdf)
+    print_data_shape("Pore-C data (Genes added)", df.shape)
+    print_memory_usage("Merged Genes")
     
-    
+    # Add the interval information
+    print_section_header("Joining Intervals with Pore-C Data")
+    df = join_intervals_pyranges(df, intervals)
+    print_data_shape("Pore-C data (Bins Added)", df.shape)
+    print_memory_usage("Join intervals")
 
-    
-    
-    
-    # # Add the interval information
-    # print_section_header("Joining Intervals with Pore-C Data")
-    # df = join_intervals_pyranges(df, intervals)
-    # print_data_shape("Pore-C data (after join)", df.shape)
-    # print_memory_usage("Join intervals")
+    # Create the AnnData objects
+    print_section_header("Creating Sparse Matrix X")
+    X_csr, obs_names, var_names = create_X(df)
+    sparsity = 1 - X_csr.count_nonzero() / (X_csr.shape[0] * X_csr.shape[1])
+    print_data_shape("Sparse matrix X", X_csr.shape)
+    print_sparsity(sparsity)
+    print_memory_usage("Build X")
 
-    # # Create the AnnData objects
-    # print_section_header("Creating Sparse Matrix X")
-    # X, obs_names, var_names = create_X(df)
-    # X_csr = csr_matrix(X)  # Create the sparse matrix
-    # sparsity = 1 - X_csr.count_nonzero() / (X_csr.shape[0] * X_csr.shape[1])
-    # print_data_shape("Sparse matrix X", X_csr.shape)
-    # print_sparsity(sparsity)
-    # print_memory_usage("Build X")
+    print_section_header("Creating Variable DataFrame (var)")
+    var = create_var_df(df, var_names)
+    print_data_shape("Variable DataFrame", var.shape)
+    print_memory_usage("Build var")
 
-    # print_section_header("Creating Variable DataFrame (var)")
-    # var = create_var_df(df, var_names)
-    # print_data_shape("Variable DataFrame", var.shape)
-    # print_memory_usage("Build var")
+    # Create the observation DataFrame
+    print_section_header("Creating Observation DataFrame (obs)")
+    obs = create_obs_df(df, obs_names)
+    print_data_shape("Observation DataFrame", obs.shape)
+    print_memory_usage("Build obs")
 
-    # # Create the observation DataFrame
-    # print_section_header("Creating Observation DataFrame (obs)")
-    # obs = create_obs_df(df, X)
-    # print_data_shape("Observation DataFrame", obs.shape)
-    # print_memory_usage("Build obs")
+    # Build the AnnData object
+    print_section_header("Building AnnData Object")
+    adata = an.AnnData(X=X_csr, obs=obs, var=var)  # Use the sparse matrix
 
-    # print_section_header("Loading and Processing Gene Data")
-    # gdf = load_and_process_genes(gene_path, obs)
-    # print_data_shape("Gene DataFrame", gdf.shape)
-    # print_memory_usage("Build gdf")
+    print_section_header("Adding Unstructured Annotations (uns)")
+    adata.uns['gene_map'] = create_gene_map(df).copy()
+    adata.uns['gdf'] = gdf.copy()
+    adata.uns['intervals'] = intervals.copy()
+    adata.uns['base_resolution'] = resolution
+    adata.uns['chrom_sizes'] = chrom.copy()
+    adata.layers["H"] = csr_matrix(adata.X.copy())
+    print_memory_usage("Make AnnData")
 
-    # print_section_header("Aggregating Gene Information")
-    # obs = aggregate_gene_info(gdf, obs, obs_names)
-    # print_data_shape("Observation DataFrame (after merge)", obs.shape)
-    # print_memory_usage("Merge Gene Information")
+    print_section_header("Saving AnnData Object")
+    adata.write(outpath)
 
-    # # Build the AnnData object
-    # print_section_header("Building AnnData Object")
-    # adata = an.AnnData(X=X_csr, obs=obs, var=var)  # Use the sparse matrix
-
-    # adata.uns['genes'] = gdf.copy()
-    # adata.uns['intervals'] = intervals.copy()
-    # adata.uns['base_resolution'] = resolution
-    # adata.uns['chrom_sizes'] = chrom
-    # adata.layers["H"] = csr_matrix(adata.X.copy())
-    # print_memory_usage("Make AnnData")
-    # sc.logging.print_memory_usage()
-
-    # print_section_header("Saving AnnData Object")
-    # adata.write(outpath)
-
-    # print_section_header("Pore-C Data Processing Complete!")
+    print_section_header("Pore-C Data Processing Complete!")

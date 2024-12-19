@@ -223,12 +223,12 @@ def load_chrom_sizes(fpath):
             - Pandas DataFrame: with columns ['chrom', 'size', 'bp_start']
             - dict: mapping chromosome names to their start positions (in base pairs)
     """
-    chroms = pd.read_csv(fpath, sep='\t', header=None, names=['chrom', 'size'])
-    chroms = chroms.head(20) # drop unplaced contigs
-    chroms['bp_start'] = chroms['size'].cumsum()
-    chroms['bp_start'] = chroms['bp_start'].shift(1).fillna(0).astype(int)
-    chrom_starts = dict(zip(chroms['chrom'].values, chroms['bp_start'].values))
-    return chroms, chrom_starts
+    chroms = pd.read_csv(fpath)
+    # chroms = chroms.head(20) # drop unplaced contigs
+    # chroms['bp_start'] = chroms['size'].cumsum()
+    # chroms['bp_start'] = chroms['bp_start'].shift(1).fillna(0).astype(int)
+    # chrom_starts = dict(zip(chroms['chrom'].values, chroms['bp_start'].values))
+    return chroms # , chrom_starts
 
 
 

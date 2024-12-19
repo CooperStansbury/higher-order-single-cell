@@ -10,6 +10,42 @@ from scipy.stats import chi2
 from scipy.sparse import diags
 
 
+def expand_and_normalize_anndata(adata):
+    """
+    Expands the input matrix and applies KR and OE normalization.
+
+    Args:
+        adata: An AnnData object.
+        layer: The layer of the AnnData object to use for expansion.
+
+    Returns:
+        None
+    """
+
+    print("Expanding input matrix...")
+    adata.obsm['A'] = clique_expand_incidence(adata.to_df(), zero_diag=False)
+
+    print("Applying KR normalization...")
+    A_kr = normalize_kr(adata.obsm['A'].to_numpy())
+    A_kr = pd.DataFrame(
+        A_kr.todense(),
+        index=adata.obs_names,
+        columns=adata.obs_names,
+    )
+    adata.obsm['A_kr'] = A_kr
+
+    print("Applying OE normalization...")
+    A_oe = normalize_oe(adata.obsm['A_kr'].to_numpy())
+    A_oe = pd.DataFrame(
+        A_oe,
+        index=adata.obs_names,
+        columns=adata.obs_names,
+    )
+    adata.obsm['A_oe'] = A_oe
+
+    print("Normalization complete.")
+
+
 def hypergraph_entropy(L):
     """
     Calculates the hypergraph entropy from the hypergraph Laplacian matrix L.

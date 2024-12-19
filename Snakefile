@@ -38,6 +38,9 @@ print(
     )
 )
 
+# hard-coded helper list
+levels = ['population_mESC', 'singlecell_mESC']
+
 ##################################
 ### SUPPLEMENTAL RULE FILES
 ##################################
@@ -55,8 +58,25 @@ rule all:
         OUTPUT + "pore_c/population_mESC.read_level.parquet",
         OUTPUT + "pore_c/singlecell_mESC.read_level.parquet",
         expand(OUTPUT + "features/{fid}.bw", fid=feature_ids),
-        expand(OUTPUT + "anndata/{level}_{resolution}_raw.h5ad", level=['population_mESC', 'singlecell_mESC'], resolution=resolutions),
-        expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", level=['population_mESC', 'singlecell_mESC'], resolution=resolutions),
+        expand(OUTPUT + "anndata/{level}_{resolution}_raw.h5ad", 
+                level=levels, 
+                resolution=resolutions),
+        expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", 
+                level=levels, 
+                resolution=resolutions),
+        expand(OUTPUT + "reports/anndata/{level}_{resolution}_summary.txt", 
+                level=levels, 
+                resolution=resolutions),
+        expand(OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad", 
+               level=levels, 
+               resolution=resolutions, 
+               chrom=config['chromosomes'])
+
+        # OUTPUT + "anndata/population_mESC_1000000_features.h5ad",
+
+
+rule archive:
+    input:
         # OUTPUT + "reference/sc_hic_fends.csv",
         # expand(OUTPUT + "1D_features/ATAC_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
         # expand(OUTPUT + "1D_features/CTCF_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
@@ -65,7 +85,6 @@ rule all:
         # expand(OUTPUT + "1D_features/RNA_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
         # expand(OUTPUT + "population_hic/{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
         # expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
-
 
 
 rule gather_linear_features:
@@ -141,8 +160,31 @@ rule add_features:
         """python scripts/add_features.py {output.anndata} {input.anndata} {input.features} > {output.log} """
         
 
+rule simple_anndata_report:
+    input:
+        OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
+    output:
+        OUTPUT + "reports/anndata/{level}_{resolution}_summary.txt",
+    conda:
+        "scanpy"
+    shell:
+        """python  scripts/report_anndata.py {input} > {output}"""
 
 
+
+rule partition_by_chromosome:
+    input:
+        anndata=OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
+    output:
+        OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad",
+    conda:
+        "scanpy"
+    params:
+        chrom=config['chromosomes']
+    shell:
+        """
+        python scripts/partition_by_chromosome.py {input.anndata} {wildcards.chrom} {output}
+        """
 
 
 # rule get_pop_hic:
