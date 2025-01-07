@@ -11,6 +11,21 @@ from mpl_toolkits.mplot3d import Axes3D
 # from matplotlib_venn import venn3
 
 
+def get_n_colors(n, cmap_name='viridis'):
+    """Generates n evenly spaced hex color codes from a Matplotlib colormap.
+
+    Args:
+        n: The number of colors to generate.
+        cmap_name: The name of the Matplotlib colormap (default: 'viridis').
+
+    Returns:
+        A list of n hex color codes (e.g., '#RRGGBB').
+    """
+
+    cmap = plt.get_cmap(cmap_name)
+    return [plt.cm.colors.rgb2hex(cmap(i / (n - 1))) for i in range(n)]
+
+
 def make_colorbar(cmap='viridis', 
                   width=0.2,
                   height=2.5, 

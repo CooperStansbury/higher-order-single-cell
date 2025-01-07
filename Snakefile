@@ -62,9 +62,9 @@ rule all:
         expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", level=levels, resolution=resolutions),
         expand(OUTPUT + "reports/anndata/{level}_{resolution}_summary.txt", level=levels, resolution=resolutions),
         expand(OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad", level=levels, resolution=resolutions, chrom=config['chromosomes']), 
-        expand(OUTPUT + "core_scores/population_mESC_{resolution}_chr{chrom}.csv", resolution=resolutions, chrom=config['chromosomes']),
+        # expand(OUTPUT + "core_scores/population_mESC_{resolution}_chr{chrom}.csv", resolution=resolutions, chrom=config['chromosomes']),
         expand(OUTPUT + "lightweight/{level}_{resolution}_anndata.h5ad", level=levels, resolution=resolutions),
-
+        expand(OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet", resolution=resolutions, chrom=config['chromosomes']),
 
 # rule archive:
 #     input:
@@ -191,7 +191,6 @@ rule compute_core_scores_by_chromosome:
         """python scripts/compute_chrom_core_scores.py {input.anndata} {wildcards.chrom} {output}"""
         
 
-
 rule make_lightweight:
     input:
         OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
@@ -204,3 +203,14 @@ rule make_lightweight:
     shell:
         """python scripts/make_lightweight.py {input} {output.genemap} {output.gdf} {output.anndata}"""
 
+
+rule mark_duplicates:
+    input:
+        OUTPUT + "by_chromosome/singlecell_mESC_{resolution}_chr{chrom}.h5ad",
+    output:
+        OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet",
+    conda:
+        "scanpy"
+    shell:
+        """python scripts/mark_duplicates_singlecell.py {input} {output}"""
+    
