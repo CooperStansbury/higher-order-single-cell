@@ -38,6 +38,9 @@ print(
     )
 )
 
+# hard-coded helper list
+levels = ['population_mESC', 'singlecell_mESC']
+
 ##################################
 ### SUPPLEMENTAL RULE FILES
 ##################################
@@ -55,18 +58,25 @@ rule all:
         OUTPUT + "pore_c/population_mESC.read_level.parquet",
         OUTPUT + "pore_c/singlecell_mESC.read_level.parquet",
         expand(OUTPUT + "features/{fid}.bw", fid=feature_ids),
-        expand(OUTPUT + "anndata/{level}_{resolution}_raw.h5ad", level=['population_mESC', 'singlecell_mESC'], resolution=resolutions),
-        expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", level=['population_mESC', 'singlecell_mESC'], resolution=resolutions),
-        # OUTPUT + "reference/sc_hic_fends.csv",
-        # expand(OUTPUT + "1D_features/ATAC_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
-        # expand(OUTPUT + "1D_features/CTCF_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
-        # expand(OUTPUT + "1D_features/H3K27me3_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
-        # expand(OUTPUT + "1D_features/H3K27ac_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
-        # expand(OUTPUT + "1D_features/RNA_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
-        # expand(OUTPUT + "population_hic/{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
-        # expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
+        expand(OUTPUT + "anndata/{level}_{resolution}_raw.h5ad", level=levels, resolution=resolutions),
+        expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", level=levels, resolution=resolutions),
+        expand(OUTPUT + "reports/anndata/{level}_{resolution}_summary.txt", level=levels, resolution=resolutions),
+        expand(OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad", level=levels, resolution=resolutions, chrom=config['chromosomes']), 
+        # expand(OUTPUT + "core_scores/population_mESC_{resolution}_chr{chrom}.csv", resolution=resolutions, chrom=config['chromosomes']),
+        expand(OUTPUT + "lightweight/{level}_{resolution}_anndata.h5ad", level=levels, resolution=resolutions),
+        expand(OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet", resolution=resolutions, chrom=config['chromosomes']),
 
-
+# rule archive:
+#     input:
+#         # OUTPUT + "reference/sc_hic_fends.csv",
+#         # expand(OUTPUT + "1D_features/ATAC_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+#         # expand(OUTPUT + "1D_features/CTCF_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+#         # expand(OUTPUT + "1D_features/H3K27me3_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+#         # expand(OUTPUT + "1D_features/H3K27ac_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+#         # expand(OUTPUT + "1D_features/RNA_{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+#         # expand(OUTPUT + "population_hic/{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
+#         # expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
+# 
 
 rule gather_linear_features:
     input:
@@ -141,61 +151,66 @@ rule add_features:
         """python scripts/add_features.py {output.anndata} {input.anndata} {input.features} > {output.log} """
         
 
+rule simple_anndata_report:
+    input:
+        OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
+    output:
+        OUTPUT + "reports/anndata/{level}_{resolution}_summary.txt",
+    conda:
+        "scanpy"
+    shell:
+        """python  scripts/report_anndata.py {input} > {output}"""
 
 
 
+rule partition_by_chromosome:
+    input:
+        anndata=OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
+    output:
+        OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad",
+    conda:
+        "scanpy"
+    params:
+        chrom=config['chromosomes']
+    shell:
+        """
+        python scripts/partition_by_chromosome.py {input.anndata} {wildcards.chrom} {output}
+        """
 
-# rule get_pop_hic:
-#     input:
-#         matrix="/nfs/turbo/umms-indikar/shared/projects/poreC/data/f1219_population_hic/4DNFICF9PA9C.mcool",
-#         res="config/resolutions.txt",
-#         chroms="config/chromosomes.txt",
-#     output:
-#         OUTPUT + "population_hic/{chr}_{res}.parquet"
-#     conda:
-#         "cooler"
-#     wildcard_constraints:
-#         chr='|'.join([re.escape(x) for x in set(chrom_names)]),
-#         res='|'.join([re.escape(x) for x in set(resolutions)]),     
-#     shell:
-#         """python scripts/get_population_hic.py {input.matrix} {wildcards.res} {wildcards.chr} {output}"""
-#                
-# rule population_pore_c_genes:
-#     input:
-#         gene_table=OUTPUT + "reference/gene_table.parquet",
-#         tables = expand(PORE_C_ROOT + "{batch}.GRCm39.align_table.parquet", batch=PORE_C_BATCHES),
-#         chroms="config/chromosomes.txt",
-#     output:
-#         OUTPUT + "population_pore_c/{chr}_genes_incidence.parquet"
-#     conda:
-#         "higher_order"
-#     wildcard_constraints:
-#         chr='|'.join([re.escape(x) for x in set(chrom_names)]),
-#         res='|'.join([re.escape(x) for x in set(resolutions)]),     
-#     shell:
-#          """python scripts/population_pore_c_gene_edges.py {input.gene_table} {wildcards.chr} {output} {input.tables}""" 
-#          
-# 
-#  
-# rule get_schic_fends:
-#     input:
-#         fends="/nfs/turbo/umms-indikar/shared/projects/poreC/data/nagano2017/schic2_mm9/seq/redb/GATC.fends",
-#     output:
-#         OUTPUT + "reference/sc_hic_fends.csv"
-#     shell:
-#         "cp {input} {output}"
-# 
-# 
-# rule get_sc_hic:
-#     input:
-#         mat="/nfs/turbo/umms-indikar/shared/projects/poreC/data/nagano2017/matrices/all_mats/{schic_id}.csv",
-#         fend=OUTPUT + "reference/sc_hic_fends.csv",
-#     output:
-#         OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet"
-#     wildcard_constraints:
-#         chr='|'.join([re.escape(x) for x in set(chrom_names)]),
-#         res='|'.join([re.escape(x) for x in set(resolutions)]),     
-#     conda:
-#         "higher_order"
-#     shell:
-#         """python scripts/get_sc_hic.py {input.mat} {input.fend} {wildcards.res} {wildcards.chr} {output} """
+
+rule compute_core_scores_by_chromosome:
+    input:
+        anndata=OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
+    output:
+        OUTPUT + "core_scores/{level}_{resolution}_chr{chrom}.csv",
+    conda:
+        "scanpy"
+    params:
+        chrom=config['chromosomes']
+    shell:
+        """python scripts/compute_chrom_core_scores.py {input.anndata} {wildcards.chrom} {output}"""
+        
+
+rule make_lightweight:
+    input:
+        OUTPUT + "anndata/{level}_{resolution}_features.h5ad",
+    output:
+        genemap=OUTPUT + "lightweight/{level}_{resolution}_gdf.parquet",
+        gdf=OUTPUT + "lightweight/{level}_{resolution}_genemap.parquet",
+        anndata=OUTPUT + "lightweight/{level}_{resolution}_anndata.h5ad",
+    conda:
+        """scanpy"""
+    shell:
+        """python scripts/make_lightweight.py {input} {output.genemap} {output.gdf} {output.anndata}"""
+
+
+rule mark_duplicates:
+    input:
+        OUTPUT + "by_chromosome/singlecell_mESC_{resolution}_chr{chrom}.h5ad",
+    output:
+        OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet",
+    conda:
+        "scanpy"
+    shell:
+        """python scripts/mark_duplicates_singlecell.py {input} {output}"""
+    
