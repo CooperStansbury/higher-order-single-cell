@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import pandas as pd
+import numpy as np
 import glob
 import tabulate
 
@@ -40,6 +41,9 @@ print(
 
 # hard-coded helper list
 levels = ['population_mESC', 'singlecell_mESC']
+# n_k = 5
+# k_range = np.linspace(2, 16, n_k).astype(int)
+k_range = [5, 10, 15]
 
 ##################################
 ### SUPPLEMENTAL RULE FILES
@@ -64,7 +68,9 @@ rule all:
         expand(OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad", level=levels, resolution=resolutions, chrom=config['chromosomes']), 
         # expand(OUTPUT + "core_scores/population_mESC_{resolution}_chr{chrom}.csv", resolution=resolutions, chrom=config['chromosomes']),
         expand(OUTPUT + "lightweight/{level}_{resolution}_anndata.h5ad", level=levels, resolution=resolutions),
-        expand(OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet", resolution=resolutions, chrom=config['chromosomes']),
+        # expand(OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet", resolution=resolutions, chrom=config['chromosomes']),
+        # expand(OUTPUT + "hypergraph-mt/u_{k}.pkl", k=k_range),
+        expand(OUTPUT + "hypergraph-mt_2/u_{k}.pkl", k=k_range),
 
 # rule archive:
 #     input:
@@ -213,4 +219,19 @@ rule mark_duplicates:
         "scanpy"
     shell:
         """python scripts/mark_duplicates_singlecell.py {input} {output}"""
+
+
+rule hypergraph_mt:
+    input:
+        "/scratch/indikar_root/indikar1/shared_data/higher_order/transcription_clusters/core_incidence_1000000_protien_coding_only.pkl",
+    output:
+        u=OUTPUT + "hypergraph-mt_2/u_{k}.pkl",
+        w=OUTPUT + "hypergraph-mt_2/w_{k}.pkl",
+        train=OUTPUT + "hypergraph-mt_2/train_{k}.parquet",
+        pred=OUTPUT + "hypergraph-mt_2/pred_{k}.parquet",
+        log=OUTPUT + "hypergraph-mt_2/log_{k}.log",
+    conda:
+        """scanpy"""
+    shell:
+        """python scripts/hypergraph_mt.py {input} {wildcards.k} {output.u} {output.w} {output.train} {output.pred} > {output.log}"""
     
