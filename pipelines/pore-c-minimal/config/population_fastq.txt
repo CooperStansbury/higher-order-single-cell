@@ -1,0 +1,5 @@
+cell_id,file_path
+batch01,/nfs/turbo/umms-indikar/shared/projects/poreC/data/fastq/population_mESC/2022-12-21-Pop-Pore-C-mESC-1st-Run.fastq
+batch02,/nfs/turbo/umms-indikar/shared/projects/poreC/data/fastq/population_mESC/2023-02-16-Pop-Pore-C-10-1and2-3rd-run.fastq
+batch03,/nfs/turbo/umms-indikar/shared/projects/poreC/data/fastq/population_mESC/2023-01-26-Pop-Pore-C-mESC-2nd-Run.fastq
+batch04,/nfs/turbo/umms-indikar/shared/projects/poreC/data/fastq/population_mESC/2023-02-15-Pop-Pore-C-mESC-10-1and10-2.fastq

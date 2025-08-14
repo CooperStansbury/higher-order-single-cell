@@ -1,0 +1,4 @@
+ref_id,file_path
+GRCm39,/nfs/turbo/umms-indikar/shared/projects/poreC/data/references/fasta/Mus_musculus.GRCm39.dna.toplevel.fa
+# CAST_EiJ,/nfs/turbo/umms-indikar/shared/projects/poreC/data/references/fasta/Mus_musculus_casteij.CAST_EiJ_v1.dna.toplevel.fa
+# 129S1_SvImJ,/nfs/turbo/umms-indikar/shared/projects/poreC/data/references/fasta/Mus_musculus_129s1svimj.129S1_SvImJ_v1.dna.toplevel.fa

@@ -1,0 +1,16 @@
+output_path: "/scratch/indikar_root/indikar1/shared_data/single_cell/"
+ref_paths: "config/references.txt"
+fastq_paths: "config/single_cell_fastq.txt"
+gtf_paths: "config/gtf.txt"
+enzyme: 'NlaIII'
+indexer: "minimap2 -d"
+minimap_args : "-ax map-ont -k 15 -w 5"
+min_mapq: 0
+base_resolution: 10000
+resolutions:
+    - 10000
+    - 100000
+    - 1000000
+    - 10000000
+threads: 36
+annotate_dupes: True

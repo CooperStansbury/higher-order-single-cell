@@ -1,0 +1,4 @@
+cell_id,file_path
+ir_bulk,/nfs/turbo/umms-indikar/shared/projects/poreC/archive/ir_bulk/merged.fastq
+bj_bulk,/nfs/turbo/umms-indikar/shared/projects/poreC/archive/bj_bulk/merged.fastq
+GM12878,/nfs/turbo/umms-indikar/shared/projects/poreC/archive/GM12878/poreC/merged.fastq

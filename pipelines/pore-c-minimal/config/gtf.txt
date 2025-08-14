@@ -1,0 +1,8 @@
+gtf_id,file_path
+GRCm39,/nfs/turbo/umms-indikar/shared/projects/poreC/data/references/gtf/Mus_musculus.GRCm39.111.gtf.gz
+# CASTEiJ,/nfs/turbo/umms-indikar/shared/projects/poreC/data/references/gtf/Mus_musculus_casteij.CAST_EiJ_v1.111.gtf.gz
+# 129S1_SvImJ,/nfs/turbo/umms-indikar/shared/projects/poreC/data/references/gtf/Mus_musculus_129s1svimj.129S1_SvImJ_v1.111.gtf.gz
+
+
+
+
