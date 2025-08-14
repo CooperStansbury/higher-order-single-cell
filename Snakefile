@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import pandas as pd
+import numpy as np
 import glob
 import tabulate
 
@@ -40,6 +41,9 @@ print(
 
 # hard-coded helper list
 levels = ['population_mESC', 'singlecell_mESC']
+# n_k = 5
+# k_range = np.linspace(2, 16, n_k).astype(int)
+k_range = [5, 10, 15]
 
 ##################################
 ### SUPPLEMENTAL RULE FILES
@@ -52,11 +56,13 @@ include: "rules/references.smk"
 
 rule all:
     input:
+        OUTPUT + "reference/fragments.parquet",
         OUTPUT + "reference/chrom_sizes.csv",
         OUTPUT + "reference/scenic.parquet",
         OUTPUT + "reference/gene_table.parquet",
         OUTPUT + "pore_c/population_mESC.read_level.parquet",
         OUTPUT + "pore_c/singlecell_mESC.read_level.parquet",
+        OUTPUT + "reference/reference_db.parquet",
         expand(OUTPUT + "features/{fid}.bw", fid=feature_ids),
         expand(OUTPUT + "anndata/{level}_{resolution}_raw.h5ad", level=levels, resolution=resolutions),
         expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", level=levels, resolution=resolutions),
@@ -64,7 +70,9 @@ rule all:
         expand(OUTPUT + "by_chromosome/{level}_{resolution}_chr{chrom}.h5ad", level=levels, resolution=resolutions, chrom=config['chromosomes']), 
         # expand(OUTPUT + "core_scores/population_mESC_{resolution}_chr{chrom}.csv", resolution=resolutions, chrom=config['chromosomes']),
         expand(OUTPUT + "lightweight/{level}_{resolution}_anndata.h5ad", level=levels, resolution=resolutions),
-        expand(OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet", resolution=resolutions, chrom=config['chromosomes']),
+        # expand(OUTPUT + "duplicates/singlecell_mESC_{resolution}_chr{chrom}.parquet", resolution=resolutions, chrom=config['chromosomes']),
+        # expand(OUTPUT + "hypergraph-mt/u_{k}.pkl", k=k_range),
+        expand(OUTPUT + "hypergraph-mt_2/u_{k}.pkl", k=k_range),
 
 # rule archive:
 #     input:
@@ -77,6 +85,35 @@ rule all:
 #         # expand(OUTPUT + "population_hic/{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
 #         # expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
 # 
+
+
+rule get_fragment_db:
+    input:
+        config['fragment_db']
+    output:
+        OUTPUT + "reference/fragments.parquet"
+    shell:
+        """cp {input} {output}"""
+
+
+rule make_reference_db:
+    input:
+        chrom_sizes=OUTPUT + "reference/chrom_sizes.csv",
+        fragments=OUTPUT + "reference/fragments.parquet",
+        gene_table=OUTPUT + "reference/gene_table.parquet",
+        expression=OUTPUT + "expression_table/rna_table.parquet",
+        feature=config['feature_paths'],
+    output:
+        table=OUTPUT + "reference/reference_db.parquet",
+    conda:
+        "scanpy"
+    shell:
+        """python scripts/make_reference_table.py {input.chrom_sizes}\
+            {input.fragments} \
+            {input.gene_table} \
+            {input.expression} \
+            {input.feature} {output.table}"""
+    
 
 rule gather_linear_features:
     input:
@@ -213,4 +250,19 @@ rule mark_duplicates:
         "scanpy"
     shell:
         """python scripts/mark_duplicates_singlecell.py {input} {output}"""
+
+
+rule hypergraph_mt:
+    input:
+        "/scratch/indikar_root/indikar1/shared_data/higher_order/transcription_clusters/core_incidence_1000000_protien_coding_only.pkl",
+    output:
+        u=OUTPUT + "hypergraph-mt_2/u_{k}.pkl",
+        w=OUTPUT + "hypergraph-mt_2/w_{k}.pkl",
+        train=OUTPUT + "hypergraph-mt_2/train_{k}.parquet",
+        pred=OUTPUT + "hypergraph-mt_2/pred_{k}.parquet",
+        log=OUTPUT + "hypergraph-mt_2/log_{k}.log",
+    conda:
+        """scanpy"""
+    shell:
+        """python scripts/hypergraph_mt.py {input} {wildcards.k} {output.u} {output.w} {output.train} {output.pred} > {output.log}"""
     

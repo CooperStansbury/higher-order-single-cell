@@ -51,7 +51,7 @@ def make_colorbar(cmap='viridis',
     """
     
     a = np.array([[0, 1]])  # Dummy data for the image
-    plt.figure(figsize=(width, height))
+    plt.figure(figsize=(width, height), facecolor='none')
     img = plt.imshow(a, cmap=cmap)
     plt.gca().set_visible(False)  # Hide the axes of the image
     cax = plt.axes([0.1, 0.2, 0.8, 0.6])  # Define the colorbar position

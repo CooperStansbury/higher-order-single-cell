@@ -11,3 +11,4 @@ RNA_3,/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig
 RNA_4,/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIUW8CG2I.bw
 RNA_5,/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIW5IZKYG.bw
 RNA_6,/nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIXOTRTRM.bw
+PolII,/nfs/turbo/umms-indikar/shared/projects/poreC/data/zhang_pol2/4DNFIG3UJTSZ.bw
