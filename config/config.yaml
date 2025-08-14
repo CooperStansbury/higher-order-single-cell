@@ -5,8 +5,8 @@ sc_pore_c_path: "/nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/
 scenic_path: "/nfs/turbo/umms-indikar/shared/projects/DGC/data/processed_data/MOUSE_500bp_up_100bp_down_B.csv"
 gtf_path: "/scratch/indikar_root/indikar1/shared_data/scpore_c/gtf/GRCm39.gtf.gz"
 feature_paths: "config/linear_features.txt"
+fragment_db: "/nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/scpore_c/references/GRCm39.fragment_db.parquet"
 resolutions:
-    - 10000
     - 100000
     - 1000000
 chromosomes:

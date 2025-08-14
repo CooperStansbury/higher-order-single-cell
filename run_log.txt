@@ -1,0 +1,31 @@
+
+----------------- CONFIG VALUES -----------------
+ outpath :  /scratch/indikar_root/indikar1/shared_data/higher_order/ 
+ chrom_sizes :  /nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/population/references/GRCm39.chrom.sizes 
+ pop_pore_c_path :  /nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/population/align_table/ 
+ sc_pore_c_path :  /nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/single_cell/align_table/ 
+ scenic_path :  /nfs/turbo/umms-indikar/shared/projects/DGC/data/processed_data/MOUSE_500bp_up_100bp_down_B.csv 
+ gtf_path :  /scratch/indikar_root/indikar1/shared_data/scpore_c/gtf/GRCm39.gtf.gz 
+ feature_paths :  config/linear_features.txt 
+ fragment_db :  /nfs/turbo/umms-indikar/shared/projects/poreC/pipeline_outputs/scpore_c/references/GRCm39.fragment_db.parquet 
+ resolutions :  [100000, 1000000] 
+ chromosomes :  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', 'X'] 
+
+----- FEATURE VALUES -----
++-----------+--------------------------------------------------------------------------------------------+
+| file_id   | file_path                                                                                  |
+|-----------+--------------------------------------------------------------------------------------------|
+| ATACSeq_1 | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/ATACSeq/4DNFI3ARZKH6.bw    |
+| ATACSeq_2 | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/ATACSeq/4DNFIPVAKPXA.bw    |
+| ATACSeq_3 | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/ATACSeq/4DNFIXT1TVT4.bw    |
+| CTCF      | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/CTCF/4DNFIFFXFV82.bw       |
+| H3K27ac   | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/H3K27ac/4DNFIXE23VC7.bw    |
+| H3K27me3  | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/H3K27me3/4DNFI7UN2C36.bw   |
+| RNA_1     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFI12AUKQS.bw |
+| RNA_2     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFI4XVSIFH.bw |
+| RNA_3     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIFVPB94O.bw |
+| RNA_4     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIUW8CG2I.bw |
+| RNA_5     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIW5IZKYG.bw |
+| RNA_6     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/4DN_Features/rna_bigwig/4DNFIXOTRTRM.bw |
+| PolII     | /nfs/turbo/umms-indikar/shared/projects/poreC/data/zhang_pol2/4DNFIG3UJTSZ.bw              |
++-----------+--------------------------------------------------------------------------------------------+

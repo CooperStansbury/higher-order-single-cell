@@ -56,11 +56,13 @@ include: "rules/references.smk"
 
 rule all:
     input:
+        OUTPUT + "reference/fragments.parquet",
         OUTPUT + "reference/chrom_sizes.csv",
         OUTPUT + "reference/scenic.parquet",
         OUTPUT + "reference/gene_table.parquet",
         OUTPUT + "pore_c/population_mESC.read_level.parquet",
         OUTPUT + "pore_c/singlecell_mESC.read_level.parquet",
+        OUTPUT + "reference/reference_db.parquet",
         expand(OUTPUT + "features/{fid}.bw", fid=feature_ids),
         expand(OUTPUT + "anndata/{level}_{resolution}_raw.h5ad", level=levels, resolution=resolutions),
         expand(OUTPUT + "anndata/{level}_{resolution}_features.h5ad", level=levels, resolution=resolutions),
@@ -83,6 +85,35 @@ rule all:
 #         # expand(OUTPUT + "population_hic/{chr}_{res}.parquet", chr=chrom_names, res=resolutions),
 #         # expand(OUTPUT + "sc_hic/{schic_id}_{chr}_{res}.parquet", schic_id=sc_hic_ids, chr=chrom_names, res=resolutions),
 # 
+
+
+rule get_fragment_db:
+    input:
+        config['fragment_db']
+    output:
+        OUTPUT + "reference/fragments.parquet"
+    shell:
+        """cp {input} {output}"""
+
+
+rule make_reference_db:
+    input:
+        chrom_sizes=OUTPUT + "reference/chrom_sizes.csv",
+        fragments=OUTPUT + "reference/fragments.parquet",
+        gene_table=OUTPUT + "reference/gene_table.parquet",
+        expression=OUTPUT + "expression_table/rna_table.parquet",
+        feature=config['feature_paths'],
+    output:
+        table=OUTPUT + "reference/reference_db.parquet",
+    conda:
+        "scanpy"
+    shell:
+        """python scripts/make_reference_table.py {input.chrom_sizes}\
+            {input.fragments} \
+            {input.gene_table} \
+            {input.expression} \
+            {input.feature} {output.table}"""
+    
 
 rule gather_linear_features:
     input:
