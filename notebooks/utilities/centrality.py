@@ -109,6 +109,7 @@ def hevc(B,
         edge_weights = np.ones((m, 1))
     if node_weights is None:
         node_weights = np.ones((n, 1))
+        
     W = sp.diags(edge_weights.flatten())
     N = sp.diags(node_weights.flatten())
 

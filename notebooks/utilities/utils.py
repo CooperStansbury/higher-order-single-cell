@@ -1,6 +1,25 @@
 import pandas as pd
 import numpy as np
 
+
+def incidence_to_hyperedge_dict(H):
+    """
+    Convert incidence matrix (rows=nodes, cols=hyperedges) to {edge_id: {node_labels}}.
+    Uses DataFrame.index for node labels and DataFrame.columns for edge IDs.
+    Treats any value >0 as membership.
+    """
+    df = H if isinstance(H, pd.DataFrame) else pd.DataFrame(H)
+    if df.columns.isnull().any():
+        df.columns = range(1, df.shape[1] + 1)
+
+    hyperedges = {}
+    for edge_id in df.columns:
+        members = set(df.index[df[edge_id].to_numpy() > 0])
+        if members:
+            hyperedges[edge_id] = members
+    return hyperedges
+
+
 def min_max(values):
     """Scales a series of values to the range [0, 1] using NumPy.
 
